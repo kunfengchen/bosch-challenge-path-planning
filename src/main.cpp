@@ -174,13 +174,15 @@ int main() {
   vector<double> map_waypoints_dy;
 
   // Waypoint map to read from
-  string map_file_ = "highway_map.csv";
+  // string map_file_ = "highway_map_bosch1.csv";
+  string map_file_ = "../data/highway_map_bosch1.csv";
   // The max s value before wrapping around the track back to 0
   double max_s = 6945.554;
 
   ifstream in_map_(map_file_.c_str(), ifstream::in);
 
   string line;
+  // cout << "reading map_file " << map_file << endl;
   while (getline(in_map_, line)) {
   	istringstream iss(line);
   	double x;
@@ -198,6 +200,7 @@ int main() {
   	map_waypoints_s.push_back(s);
   	map_waypoints_dx.push_back(d_x);
   	map_waypoints_dy.push_back(d_y);
+  	cout << x << ", " << y << ", " << s << ", " << d_x << ", " << d_y << endl;
   }
 
   // the planner state
