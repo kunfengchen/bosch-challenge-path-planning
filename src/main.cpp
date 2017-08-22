@@ -283,12 +283,20 @@ int main() {
 
             ///// Checking the sensors and state
 			///// Adjust the state accordingly
-			vector<double> lane_speeds = t3p1help::getLaneSpeed(lane_sensors);
-			cout << "lane speed: ";
+			vector<double> lane_speeds = t3p1help::getLaneSpeeds(lane_sensors);
+			cout << "lane speed : ";
 			for (int l=0; l < lane_speeds.size(); l++) {
 				std::cout << lane_speeds[l] << " ";
 			}
 			cout << std::endl;
+            cout << "front space: ";
+			std::vector<double> fronts =
+					t3p1help::getFrontDistSs(time_ahead, car_s, car_d, lane_sensors);
+            for (int l=0; l < fronts.size(); l++) {
+                std::cout << fronts[l] << " ";
+            }
+			cout << std::endl;
+
             // Too close
 			if (t3p1help::tooClose(time_ahead, car_s, car_d, lane_sensors)) {
 				cout << "too close" << endl;

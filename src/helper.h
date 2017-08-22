@@ -108,6 +108,15 @@ namespace t3p1help {
     }
 
     /**
+     * Get the speed from the sensor car data
+     * @param car
+     * @return
+     */
+    double getSensorCarSpeed(std::vector<double> car) {
+        return sqrt(car[3]*car[3] + car[4]*car[4]);
+    }
+
+    /**
      * Get the Frenet s distance ahead
      * @param time_ahead
      * @param car_s
@@ -115,17 +124,19 @@ namespace t3p1help {
      * @param range
      * @return
      */
-    double getFrontDistS(double time_ahead, double car_s, double car_d,
-                     const std::vector<std::vector<std::vector<double>>> lane_sensors) {
+    double
+    getFrontDistS(double time_ahead, double car_s, double car_d,
+                  const std::vector<std::vector<std::vector<double>>> lane_sensors) {
         double min_dist = MAX_S;
         int car_lane = getLaneFromD(car_d);
         double dist;
         double v_x, v_y, sen_speed, sen_s;
         for (auto car: lane_sensors[car_lane]) {
             dist = car[5] - car_s;
-            v_x = car[3];
-            v_y = car[4];
-            sen_speed = sqrt(v_x*v_x + v_y*v_y);
+            // v_x = car[3];
+            // v_y = car[4];
+            // sen_speed = sqrt(v_x*v_x + v_y*v_y);
+            sen_speed = getSensorCarSpeed(car);
 
             dist += time_ahead * sen_speed;
             if (dist < 0) { // the sensored car is behind
@@ -143,8 +154,23 @@ namespace t3p1help {
         return min_dist;
     }
 
-    double getSensorCarSpeed(std::vector<double> car) {
-       return sqrt(car[3]*car[3] + car[4]*car[4]);
+    /**
+     * Get front car distance in S for all lanes
+     * @param time_ahead
+     * @param car_s
+     * @param car_d
+     * @return
+     */
+    std::vector<double>
+    getFrontDistSs(double time_ahead, double car_s, double car_d,
+                  const std::vector<std::vector<std::vector<double>>> lane_sensors) {
+        std::vector<double> fronts;
+        for (int l=0; l < LANE_NUM; l++) {
+            fronts.push_back(getFrontDistS(time_ahead, car_s,
+                                           getDFromLane(l),
+                                           lane_sensors));
+        }
+        return fronts;
     }
 
     /**
@@ -216,12 +242,27 @@ namespace t3p1help {
                 safe_lane = 1;
             }
         } else if (cur_lane == 1) {
-            if (hasSafeDistLane(time_ahead, car_s, getDFromLane(0), lane_sensors)) {
-                safe_lane = 0;
-            } else if (hasSafeDistLane(time_ahead, car_s, getDFromLane(2), lane_sensors)) {
-                safe_lane = 2;
+            std::vector<double> fronts =
+                    getFrontDistSs(time_ahead, car_s, car_d,lane_sensors);
+            bool safe0 =
+                    hasSafeDistLane(time_ahead, car_s,
+                                    getDFromLane(0), lane_sensors);
+            bool safe2 =
+                    hasSafeDistLane(time_ahead, car_s,
+                                    getDFromLane(2), lane_sensors);
+            if (safe0 && safe2) {
+                if (fronts[0] > fronts[2]) {
+                    safe_lane = 0;
+                } else {
+                    safe_lane = 2;
+                }
+            } else if (safe0) {
+                    safe_lane = 0;
+            } else if (safe2) {
+                    safe_lane = 2;
             }
         }
+
         return safe_lane;
     }
 
@@ -231,7 +272,7 @@ namespace t3p1help {
      * @return
      */
     std::vector<double>
-    getLaneSpeed(const std::vector<std::vector<std::vector<double>>> lane_sensors) {
+    getLaneSpeeds(const std::vector<std::vector<std::vector<double>>> lane_sensors) {
         double min_speed;
         double car_speed;
         std::vector<double> lane_speeds;
@@ -246,67 +287,6 @@ namespace t3p1help {
             lane_speeds.push_back(min_speed*MPS_TO_MPH);
         }
         return lane_speeds;
-    }
-
-
-    /** JMT source code from Udacity: Implement Quintic Polynomial Solver Solution
-     * @param start
-     * @param end
-     * @param T
-     * @return
-     */
-    std::vector<double> JMT(std::vector< double> start, std::vector <double> end, double T) {
-        /* Calculate the Jerk Minimizing Trajectory that connects the initial state
-         * to the final state in time T.
-         * INPUTS
-         * start - the vehicles start location given as a length three array
-         * corresponding to initial values of [s, s_dot, s_double_dot]
-         * end   - the desired end state for vehicle. Like "start" this is a
-         * length three array.
-         * T     - The duration, in seconds, over which this maneuver should occur.
-         * OUTPUT
-         * an array of length 6, each value corresponding to a coefficent in the polynomial
-         * s(t) = a_0 + a_1 * t + a_2 * t**2 + a_3 * t**3 + a_4 * t**4 + a_5 * t**5
-         *
-         * EXAMPLE
-         *
-         * > JMT( [0, 10, 0], [10, 10, 0], 1)
-         * [0.0, 10.0, 0.0, 0.0, 0.0, 0.0]
-        */
-
-        MatrixXd A = MatrixXd(3, 3);
-        A << T*T*T, T*T*T*T, T*T*T*T*T,
-                3*T*T, 4*T*T*T,5*T*T*T*T,
-                6*T, 12*T*T, 20*T*T*T;
-
-        MatrixXd B = MatrixXd(3,1);
-        B << end[0]-(start[0]+start[1]*T+.5*start[2]*T*T),
-                end[1]-(start[1]+start[2]*T),
-                end[2]-start[2];
-
-        MatrixXd Ai = A.inverse();
-
-        MatrixXd C = Ai*B;
-
-        std::vector <double> result = {start[0], start[1], .5*start[2]};
-        for(int i = 0; i < C.size(); i++)
-        {
-            result.push_back(C.data()[i]);
-        }
-
-        return result;
-
-    }
-
-    double eval_poly(std::vector<double> poly, double x) {
-        int size = poly.size();
-        double ret = poly[0];
-        double p = 1;
-        for (int i = 1; i < size; i++) {
-            p *= x;
-            ret += poly[i]*p;
-        }
-        return ret;
     }
 
 }
