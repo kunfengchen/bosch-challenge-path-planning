@@ -114,7 +114,7 @@ namespace t3p1help {
      * @param car
      * @return
      */
-    double getSensorCarSpeed(std::vector<double> car) {
+    double getSensorCarSpeedMPS(std::vector<double> car) {
         return sqrt(car[3]*car[3] + car[4]*car[4]);
     }
 
@@ -135,10 +135,7 @@ namespace t3p1help {
         double v_x, v_y, sen_speed, sen_s;
         for (auto car: lane_sensors[car_lane]) {
             dist = car[5] - car_s;
-            // v_x = car[3];
-            // v_y = car[4];
-            // sen_speed = sqrt(v_x*v_x + v_y*v_y);
-            sen_speed = getSensorCarSpeed(car);
+            sen_speed = getSensorCarSpeedMPS(car);
 
             dist += time_ahead * sen_speed;
             if (dist < 0) { // the sensored car is behind
@@ -180,7 +177,7 @@ namespace t3p1help {
      * @param time_ahead The time in the future to check
      * @param car_s
      * @param car_d
-     * @param car_speed
+     * @param car_speed MPH
      * @return
      */
     bool hasSafeDistLane(double time_ahead, double car_s, double car_d, double car_speed,
@@ -190,11 +187,11 @@ namespace t3p1help {
         double v_x, v_y, sen_speed, sen_s;
         for (auto car: lane_sensors[check_lane]) {
             dist = car[5] - car_s;
-            // v_x = car[3];
-            // v_y = car[4];
-            // sen_speed = sqrt(v_x*v_x + v_y*v_y);
-            sen_speed = getSensorCarSpeed(car);
-
+            sen_speed = getSensorCarSpeedMPS(car);
+            if (car_speed < sen_speed) {
+                std::cout << "speed is too slow: " << car_speed << std::endl;
+                return false;
+            }
             dist += time_ahead * sen_speed;
             if (dist >= 0 ) { // sensored car infront
                 if (dist < 15) {  // 21 is conservative
@@ -231,7 +228,7 @@ namespace t3p1help {
                   const std::vector<std::vector<std::vector<double>>> lane_sensors) {
         double front_dist_s = getFrontDistS(time_ahead, car_s, car_d, lane_sensors);
         bool ret = false;
-        if (front_dist_s < 20) { // 20 is conservative
+        if (front_dist_s < 25) {
             ret = true;
         }
         return ret;
@@ -302,14 +299,14 @@ namespace t3p1help {
      * @return
      */
     std::vector<double>
-    getLaneSpeeds(const std::vector<std::vector<std::vector<double>>> lane_sensors) {
+    getLaneSpeedsMPH(const std::vector<std::vector<std::vector<double>>> lane_sensors) {
         double min_speed;
         double car_speed;
         std::vector<double> lane_speeds;
         for (int l=0; l < LANE_NUM; l++) {
             min_speed = MAX_SPEED;
             for (auto car: lane_sensors[l]) {
-                car_speed = getSensorCarSpeed(car);
+                car_speed = getSensorCarSpeedMPS(car);
                 if (car_speed < min_speed) {
                     min_speed = car_speed;
                 }

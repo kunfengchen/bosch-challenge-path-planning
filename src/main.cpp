@@ -11,7 +11,7 @@
 #include "spline.h"
 #include "helper.h"
 
-using namespace std;
+// using namespace std;
 
 // for convenience
 using json = nlohmann::json;
@@ -24,13 +24,13 @@ double rad2deg(double x) { return x * 180 / pi(); }
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
-string hasData(string s) {
+std::string hasData(std::string s) {
   auto found_null = s.find("null");
   auto b1 = s.find_first_of("[");
   auto b2 = s.find_first_of("}");
-  if (found_null != string::npos) {
+  if (found_null != std::string::npos) {
     return "";
-  } else if (b1 != string::npos && b2 != string::npos) {
+  } else if (b1 != std::string::npos && b2 != std::string::npos) {
     return s.substr(b1, b2 - b1 + 2);
   }
   return "";
@@ -40,7 +40,7 @@ double distance(double x1, double y1, double x2, double y2)
 {
 	return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
 }
-int ClosestWaypoint(double x, double y, vector<double> maps_x, vector<double> maps_y)
+int ClosestWaypoint(double x, double y, std::vector<double> maps_x, std::vector<double> maps_y)
 {
 
 	double closestLen = 100000; //large number
@@ -63,7 +63,7 @@ int ClosestWaypoint(double x, double y, vector<double> maps_x, vector<double> ma
 
 }
 
-int NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
+int NextWaypoint(double x, double y, double theta, std::vector<double> maps_x, std::vector<double> maps_y)
 {
 
 	int closestWaypoint = ClosestWaypoint(x,y,maps_x,maps_y);
@@ -85,7 +85,7 @@ int NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector
 }
 
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
-vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
+std::vector<double> getFrenet(double x, double y, double theta, std::vector<double> maps_x, std::vector<double> maps_y)
 {
 	int next_wp = NextWaypoint(x,y, theta, maps_x,maps_y);
 
@@ -134,7 +134,7 @@ vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x
 }
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
-vector<double> getXY(double s, double d, vector<double> maps_s, vector<double> maps_x, vector<double> maps_y)
+std::vector<double> getXY(double s, double d, std::vector<double> maps_s, std::vector<double> maps_x, std::vector<double> maps_y)
 {
 	int prev_wp = -1;
 
@@ -167,23 +167,22 @@ int main() {
   uWS::Hub h;
 
   // Load up map values for waypoint's x,y,s and d normalized normal vectors
-  vector<double> map_waypoints_x;
-  vector<double> map_waypoints_y;
-  vector<double> map_waypoints_s;
-  vector<double> map_waypoints_dx;
-  vector<double> map_waypoints_dy;
+  std::vector<double> map_waypoints_x;
+  std::vector<double> map_waypoints_y;
+  std::vector<double> map_waypoints_s;
+  std::vector<double> map_waypoints_dx;
+  std::vector<double> map_waypoints_dy;
 
   // Waypoint map to read from
-  string map_file_ = "../highway_map_bosch1.csv";
+  std::string map_file_ = "../highway_map_bosch1.csv";
   // The max s value before wrapping around the track back to 0
   double max_s = 6945.554;
 
-  ifstream in_map_(map_file_.c_str(), ifstream::in);
+  std::ifstream in_map_(map_file_.c_str(), std::ifstream::in);
 
-  string line;
-  // cout << "reading map_file " << map_file << endl;
+  std::string line;
   while (getline(in_map_, line)) {
-  	istringstream iss(line);
+  	std::istringstream iss(line);
   	double x;
   	double y;
   	float s;
@@ -199,7 +198,6 @@ int main() {
   	map_waypoints_s.push_back(s);
   	map_waypoints_dx.push_back(d_x);
   	map_waypoints_dy.push_back(d_y);
-  	// cout << x << ", " << y << ", " << s << ", " << d_x << ", " << d_y << endl;
   }
 
   // the planner state
@@ -222,7 +220,6 @@ int main() {
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
     //auto sdata = string(data).substr(0, length);
-    //cout << sdata << endl;
 
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
 
@@ -231,7 +228,7 @@ int main() {
       if (s != "") {
         auto j = json::parse(s);
         
-        string event = j[0].get<string>();
+        std::string event = j[0].get<std::string>();
         
         if (event == "telemetry") {
           // j[1] is the dajta JSON object
@@ -252,15 +249,15 @@ int main() {
           	double end_path_d = j[1]["end_path_d"];
 
           	// Sensor Fusion Data, a list of all other cars on the same side of the road.
-			// vector<vector<double>>
+			// std::vector<std::vector<double>>
           	auto sensor_fusion = j[1]["sensor_fusion"];
 
 			int prev_size = previous_path_x.size();
 
           	json msgJson;
 
-          	vector<double> next_x_vals;
-          	vector<double> next_y_vals;
+          	std::vector<double> next_x_vals;
+          	std::vector<double> next_y_vals;
 
 
           	// DONE: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
@@ -269,7 +266,7 @@ int main() {
 			auto lane_sensors = t3p1help::sortSensor(sensor_fusion);
 			/// Print the sensor_fusion info
 			// for (auto lane : lanes) {
-			//     cout << "lane sensors:" << endl;
+			//     std::cout << "lane sensors:" << std::endl;
 			//     t3p1help::printSensors(lane);
 			// }
 
@@ -283,48 +280,56 @@ int main() {
 
             ///// Checking the sensors and state
 			///// Adjust the state accordingly
-			vector<double> lane_speeds = t3p1help::getLaneSpeeds(lane_sensors);
-			cout << "lane speed : ";
+			std::vector<double> lane_speeds = t3p1help::getLaneSpeedsMPH(lane_sensors);
+			std::cout << "lane speed : ";
 			for (int l=0; l < lane_speeds.size(); l++) {
 				std::cout << lane_speeds[l] << " ";
 			}
-			cout << " car_v: " << car_speed << std::endl;
-            cout << "front space: ";
+			std::cout << " car_v: " << car_speed << std::endl;
+            std::cout << "front space: ";
 			std::vector<double> fronts =
 					t3p1help::getFrontDistSs(time_ahead, car_s, car_d, lane_sensors);
             for (int l=0; l < fronts.size(); l++) {
                 std::cout << fronts[l] << " ";
             }
-			cout << std::endl;
+			std::cout << std::endl;
 
             // Too close
+			double car_v_mps = car_speed / t3p1help::MPS_TO_MPH;
             bool tooClose = t3p1help::tooClose(time_ahead, car_s, car_d, lane_sensors);
             bool closeToChangeLane =
 					t3p1help::isCloseToChangeLane(time_ahead, car_s, car_d, lane_sensors);
 			if (closeToChangeLane) {
-				cout << "close to change lane: " << endl;
+				std::cout << "close to change lane: " << std::endl;
 				int changing_lane =
-						t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, car_speed, lane_sensors);
-				if (p_state.lane_num == changing_lane && tooClose) {
-					cout << "Not safe to change lane. Stay in lane " << p_state.lane_num << endl;
-					p_state.ref_velocity -= p_state.velocity_step;
-					cout << "decreasing speed" << endl;
+						t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, car_v_mps, lane_sensors);
+				if (p_state.lane_num == changing_lane) {
+					std::cout << "Not safe to change lane. Stay in lane " << p_state.lane_num << std::endl;
+                    if (tooClose) {
+						if (p_state.ref_velocity > lane_speeds[changing_lane]) {
+						    p_state.ref_velocity -= p_state.velocity_step;
+						    std::cout << "decreasing speed to " << p_state.ref_velocity << std::endl;
+						} else {
+							std::cout << "stay land speed in " << p_state.ref_velocity << std::endl;
+						}
+
+					}
 				} else {
 					// p_state.lane_num = t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, lane_sensors);
 					p_state.lane_num = changing_lane;
-					cout << "changing lane to " << p_state.lane_num << endl;
+					std::cout << "changing lane to " << p_state.lane_num << std::endl;
 				}
 
 			} else if (p_state.ref_velocity < p_state.limit_velocity) {
-				cout << "increasing speed" << endl;
+				std::cout << "increasing speed" << std::endl;
 				p_state.ref_velocity += p_state.velocity_step;
 			} else {
-				cout << "constant speed" << endl;
+				std::cout << "constant speed" << std::endl;
 			}
 
 			// Get the horizon way points in global coordinates
-			vector<double> ptsx;
-			vector<double> ptsy;
+			std::vector<double> ptsx;
+			std::vector<double> ptsy;
 
 			double ref_x = car_x;
 			double ref_y = car_y;
@@ -356,17 +361,17 @@ int main() {
 				ptsy.push_back(ref_y);
 			}
 
-			vector<double> next_waypoint0 =
+			std::vector<double> next_waypoint0 =
 					getXY(car_s+30, t3p1help::getDFromLane(p_state.lane_num),
 						  map_waypoints_s,
 					      map_waypoints_x,
 					      map_waypoints_y);
-            vector<double> next_waypoint1 =
+            std::vector<double> next_waypoint1 =
 					getXY(car_s+60, t3p1help::getDFromLane(p_state.lane_num),
 						  map_waypoints_s,
 					      map_waypoints_x,
 					      map_waypoints_y);
-            vector<double> next_waypoint2 =
+            std::vector<double> next_waypoint2 =
 					getXY(car_s+90, t3p1help::getDFromLane(p_state.lane_num),
 						  map_waypoints_s,
 					      map_waypoints_x,
@@ -382,7 +387,7 @@ int main() {
 			// transform coordinates to car's
             double local_x;
 			double local_y;
-			// cout << "ref_x: " << ref_x << ", ref_y: " << ref_y << endl;
+			// std::cout << "ref_x: " << ref_x << ", ref_y: " << ref_y << std::endl;
             for (int i=0; i < ptsx.size(); i++) {
 				local_x = ptsx[i] - ref_x;
 				local_y = ptsy[i] - ref_y;
@@ -392,8 +397,8 @@ int main() {
 
 			// push back previous waypoints
 			for (int i=0; i < pre_size; i++) {
-				// cout << "previous_path_x[" << i << "]=" << previous_path_x[i]
-				// 	 << ", previous_path_y[" << i << "]=" << previous_path_y[i] << endl;
+				// std::cout << "previous_path_x[" << i << "]=" << previous_path_x[i]
+				// 	 << ", previous_path_y[" << i << "]=" << previous_path_y[i] << std::endl;
 				next_x_vals.push_back(previous_path_x[i]);
 				next_y_vals.push_back(previous_path_y[i]);
 			}
