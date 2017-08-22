@@ -33,6 +33,8 @@ namespace t3p1help {
         double ref_velocity = 0.0;
         // velocity limit, MPH
         // double limit_velocity = 49.5;
+        // double limit_velocity = 49.72; // over speed when constant changing lanes
+        // double limit_velocity = 49.70;
         double limit_velocity = 49.72;
         // horizon way point size;
         double horizon_size = 50;
@@ -219,7 +221,24 @@ namespace t3p1help {
                   const std::vector<std::vector<std::vector<double>>> lane_sensors) {
         double front_dist_s = getFrontDistS(time_ahead, car_s, car_d, lane_sensors);
         bool ret = false;
-        if (front_dist_s < 30) { // 20 is conservative
+        if (front_dist_s < 20) { // 20 is conservative
+            ret = true;
+        }
+        return ret;
+    }
+
+    /**
+     * Check if distant is closing for changing lane
+     * @param time_ahead
+     * @param car_s
+     * @param car_d
+     * @return
+     */
+    bool isCloseToChangeLane(double time_ahead, double car_s, double car_d,
+              const std::vector<std::vector<std::vector<double>>> lane_sensors) {
+        double front_dist_s = getFrontDistS(time_ahead, car_s, car_d, lane_sensors);
+        bool ret = false;
+        if (front_dist_s < 50) { // 20 is conservative
             ret = true;
         }
         return ret;

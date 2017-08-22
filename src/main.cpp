@@ -298,16 +298,19 @@ int main() {
 			cout << std::endl;
 
             // Too close
-			if (t3p1help::tooClose(time_ahead, car_s, car_d, lane_sensors)) {
-				cout << "too close" << endl;
+            bool tooClose = t3p1help::tooClose(time_ahead, car_s, car_d, lane_sensors);
+            bool closeToChangeLane =
+					t3p1help::isCloseToChangeLane(time_ahead, car_s, car_d, lane_sensors);
+			if (closeToChangeLane) {
+				cout << "close to change lane: " << endl;
 				int changing_lane = t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, lane_sensors);
-				if (p_state.lane_num == changing_lane) {
+				if (p_state.lane_num == changing_lane && tooClose) {
 					cout << "Not safe to change lane. Stay in lane " << p_state.lane_num << endl;
 					p_state.ref_velocity -= p_state.velocity_step;
 					cout << "decreasing speed" << endl;
 				} else {
 					p_state.lane_num = t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, lane_sensors);
-					cout << "Changing lane to " << p_state.lane_num << endl;
+					cout << "changing lane to " << p_state.lane_num << endl;
 				}
 
 			} else if (p_state.ref_velocity < p_state.limit_velocity) {
