@@ -174,8 +174,7 @@ int main() {
   vector<double> map_waypoints_dy;
 
   // Waypoint map to read from
-  // string map_file_ = "highway_map_bosch1.csv";
-  string map_file_ = "../data/highway_map_bosch1.csv";
+  string map_file_ = "../highway_map_bosch1.csv";
   // The max s value before wrapping around the track back to 0
   double max_s = 6945.554;
 
@@ -200,7 +199,7 @@ int main() {
   	map_waypoints_s.push_back(s);
   	map_waypoints_dx.push_back(d_x);
   	map_waypoints_dy.push_back(d_y);
-  	cout << x << ", " << y << ", " << s << ", " << d_x << ", " << d_y << endl;
+  	// cout << x << ", " << y << ", " << s << ", " << d_x << ", " << d_y << endl;
   }
 
   // the planner state
@@ -208,7 +207,7 @@ int main() {
 
   p_state.lane_num = 1;
   p_state.ref_velocity = 0.0;
-  p_state.limit_velocity = 49.5;
+  // p_state.limit_velocity = 49.5;
   p_state.horizon_size = 50;
   p_state.horizon_dist = 30.0;
   p_state.point_dt = 0.02;
@@ -284,19 +283,25 @@ int main() {
 
             ///// Checking the sensors and state
 			///// Adjust the state accordingly
+			vector<double> lane_speeds = t3p1help::getLaneSpeed(lane_sensors);
+			cout << "lane speed: ";
+			for (int l=0; l < lane_speeds.size(); l++) {
+				std::cout << lane_speeds[l] << " ";
+			}
+			cout << std::endl;
             // Too close
 			if (t3p1help::tooClose(time_ahead, car_s, car_d, lane_sensors)) {
 				cout << "too close" << endl;
 				int changing_lane = t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, lane_sensors);
 				if (p_state.lane_num == changing_lane) {
 					cout << "Not safe to change lane. Stay in lane " << p_state.lane_num << endl;
+					p_state.ref_velocity -= p_state.velocity_step;
+					cout << "decreasing speed" << endl;
 				} else {
 					p_state.lane_num = t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, lane_sensors);
 					cout << "Changing lane to " << p_state.lane_num << endl;
 				}
 
-				p_state.ref_velocity -= p_state.velocity_step;
-				cout << "decreasing speed" << endl;
 			} else if (p_state.ref_velocity < p_state.limit_velocity) {
 				cout << "increasing speed" << endl;
 				p_state.ref_velocity += p_state.velocity_step;
@@ -368,13 +373,8 @@ int main() {
             for (int i=0; i < ptsx.size(); i++) {
 				local_x = ptsx[i] - ref_x;
 				local_y = ptsy[i] - ref_y;
-				/// cout << "ptsx[" << i << "]=" << ptsx[i]
-				///	 << ", ptsy[" << i << "]=" << ptsy[i] << endl;
-				/// cout << "local_x: " << local_x << ", local_y: " << local_y << endl;
 				ptsx[i] = local_x * cos(0 - ref_yaw) - local_y * sin(0-ref_yaw);
 				ptsy[i] = local_x * sin(0 - ref_yaw) + local_y * cos(0-ref_yaw);
-				/// cout << "ptsx[" << i << "]=" << ptsx[i]
-				/// 	 << ", ptsy[" << i << "]=" << ptsy[i] << endl << endl;
 			}
 
 			// push back previous waypoints

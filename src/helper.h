@@ -13,17 +13,27 @@ namespace t3p1help {
     const double MAX_S = 6914.14925765991;
     // 1 meter per second = 2.23694 miles per hour
     const double MPS_TO_MPH = 2.23694;
+    const double MAX_SPEED = 50.0;
+    const int LANE_NUM = 3;
+
+    // The state of the ego car
+    // CS = Constant Speed
+    // CLL = Changing Lane Left
+    // CLR = Changing Lane Right
+    enum EGO_STATE {CS, CLL, CLR};
 
     /**
      * Keep the state for the planner.
      */
     struct planner_state {
+        EGO_STATE ego_state = CS;
         // current car lane
         int lane_num = 1;
         // current velocity in mph, mile per hour (MPH)
         double ref_velocity = 0.0;
         // velocity limit, MPH
-        double limit_velocity = 49.5;
+        // double limit_velocity = 49.5;
+        double limit_velocity = 49.72;
         // horizon way point size;
         double horizon_size = 50;
         // horizon distance in meter
@@ -133,6 +143,10 @@ namespace t3p1help {
         return min_dist;
     }
 
+    double getSensorCarSpeed(std::vector<double> car) {
+       return sqrt(car[3]*car[3] + car[4]*car[4]);
+    }
+
     /**
      * Check if there is enough of space for changing lane
      * @param time_ahead The time in the future to check
@@ -153,12 +167,12 @@ namespace t3p1help {
 
             dist += time_ahead * sen_speed;
             if (dist >= 0 ) { // sensored car infront
-                if (dist < 21) {
+                if (dist < 15) {  // 21 is conservative
                     std::cout << "short front dist " << dist << std::endl;
                     return false;
                 }
             } else { // sensored car behind
-                if (dist > -10) {
+                if (dist > -17) { // 15 is conservative
                     std::cout << "short back dist " << dist << std::endl;
                     return false;
                 }
@@ -179,7 +193,7 @@ namespace t3p1help {
                   const std::vector<std::vector<std::vector<double>>> lane_sensors) {
         double front_dist_s = getFrontDistS(time_ahead, car_s, car_d, lane_sensors);
         bool ret = false;
-        if (front_dist_s < 20) {
+        if (front_dist_s < 30) { // 20 is conservative
             ret = true;
         }
         return ret;
@@ -210,6 +224,30 @@ namespace t3p1help {
         }
         return safe_lane;
     }
+
+    /**
+     * Return the lowest cars speed in each lane
+     * @param lane_sensors
+     * @return
+     */
+    std::vector<double>
+    getLaneSpeed(const std::vector<std::vector<std::vector<double>>> lane_sensors) {
+        double min_speed;
+        double car_speed;
+        std::vector<double> lane_speeds;
+        for (int l=0; l < LANE_NUM; l++) {
+            min_speed = MAX_SPEED;
+            for (auto car: lane_sensors[l]) {
+                car_speed = getSensorCarSpeed(car);
+                if (car_speed < min_speed) {
+                    min_speed = car_speed;
+                }
+            }
+            lane_speeds.push_back(min_speed*MPS_TO_MPH);
+        }
+        return lane_speeds;
+    }
+
 
     /** JMT source code from Udacity: Implement Quintic Polynomial Solver Solution
      * @param start
