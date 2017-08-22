@@ -288,7 +288,7 @@ int main() {
 			for (int l=0; l < lane_speeds.size(); l++) {
 				std::cout << lane_speeds[l] << " ";
 			}
-			cout << std::endl;
+			cout << " car_v: " << car_speed << std::endl;
             cout << "front space: ";
 			std::vector<double> fronts =
 					t3p1help::getFrontDistSs(time_ahead, car_s, car_d, lane_sensors);
@@ -303,13 +303,15 @@ int main() {
 					t3p1help::isCloseToChangeLane(time_ahead, car_s, car_d, lane_sensors);
 			if (closeToChangeLane) {
 				cout << "close to change lane: " << endl;
-				int changing_lane = t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, lane_sensors);
+				int changing_lane =
+						t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, car_speed, lane_sensors);
 				if (p_state.lane_num == changing_lane && tooClose) {
 					cout << "Not safe to change lane. Stay in lane " << p_state.lane_num << endl;
 					p_state.ref_velocity -= p_state.velocity_step;
 					cout << "decreasing speed" << endl;
 				} else {
-					p_state.lane_num = t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, lane_sensors);
+					// p_state.lane_num = t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, lane_sensors);
+					p_state.lane_num = changing_lane;
 					cout << "changing lane to " << p_state.lane_num << endl;
 				}
 

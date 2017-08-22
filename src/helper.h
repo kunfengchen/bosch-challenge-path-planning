@@ -35,7 +35,7 @@ namespace t3p1help {
         // double limit_velocity = 49.5;
         // double limit_velocity = 49.72; // over speed when constant changing lanes
         // double limit_velocity = 49.70;
-        double limit_velocity = 49.72;
+        double limit_velocity = 49.65;
         // horizon way point size;
         double horizon_size = 50;
         // horizon distance in meter
@@ -180,18 +180,20 @@ namespace t3p1help {
      * @param time_ahead The time in the future to check
      * @param car_s
      * @param car_d
+     * @param car_speed
      * @return
      */
-    bool hasSafeDistLane(double time_ahead, double car_s, double car_d,
+    bool hasSafeDistLane(double time_ahead, double car_s, double car_d, double car_speed,
                      const std::vector<std::vector<std::vector<double>>> lane_sensors) {
         int check_lane = getLaneFromD(car_d);
         double dist;
         double v_x, v_y, sen_speed, sen_s;
         for (auto car: lane_sensors[check_lane]) {
             dist = car[5] - car_s;
-            v_x = car[3];
-            v_y = car[4];
-            sen_speed = sqrt(v_x*v_x + v_y*v_y);
+            // v_x = car[3];
+            // v_y = car[4];
+            // sen_speed = sqrt(v_x*v_x + v_y*v_y);
+            sen_speed = getSensorCarSpeed(car);
 
             dist += time_ahead * sen_speed;
             if (dist >= 0 ) { // sensored car infront
@@ -200,9 +202,17 @@ namespace t3p1help {
                     return false;
                 }
             } else { // sensored car behind
-                if (dist > -17) { // 15 is conservative
-                    std::cout << "short back dist " << dist << std::endl;
-                    return false;
+                if (car_speed > sen_speed) {
+                    if (dist > -8) {
+                        std::cout << "short back dist when faster: " << dist << std::endl;
+                        return false;
+                    }
+
+                } else {
+                   if (dist > -17) { // -15 is conservative
+                       std::cout << "short back dist when slower: " << dist << std::endl;
+                       return false;
+                   }
                 }
 
             }
@@ -249,25 +259,26 @@ namespace t3p1help {
      * @param time_ahead
      * @param car_s
      * @param cars_d
+     * @param cars_speed
      * @return
      */
-    int getSafeChangeLane(double time_ahead, double car_s, double car_d,
+    int getSafeChangeLane(double time_ahead, double car_s, double car_d, double car_speed,
                       const std::vector<std::vector<std::vector<double>>> lane_sensors) {
         int cur_lane = getLaneFromD(car_d);
         int safe_lane = cur_lane;
         if (cur_lane == 0 || cur_lane == 2) {
             // if (!tooClose(car_s+3, getDFromLane(1), lane_sensors)) {
-            if (hasSafeDistLane(time_ahead, car_s, getDFromLane(1), lane_sensors)) {
+            if (hasSafeDistLane(time_ahead, car_s, getDFromLane(1), car_speed, lane_sensors)) {
                 safe_lane = 1;
             }
         } else if (cur_lane == 1) {
             std::vector<double> fronts =
                     getFrontDistSs(time_ahead, car_s, car_d,lane_sensors);
             bool safe0 =
-                    hasSafeDistLane(time_ahead, car_s,
+                    hasSafeDistLane(time_ahead, car_s, car_speed,
                                     getDFromLane(0), lane_sensors);
             bool safe2 =
-                    hasSafeDistLane(time_ahead, car_s,
+                    hasSafeDistLane(time_ahead, car_s, car_speed,
                                     getDFromLane(2), lane_sensors);
             if (safe0 && safe2) {
                 if (fronts[0] > fronts[2]) {
