@@ -73,7 +73,7 @@ int NextWaypoint(double x, double y, double theta, std::vector<double> maps_x, s
 
 	double heading = atan2( (map_y-y),(map_x-x) );
 
-	double angle = abs(theta-heading);
+	double angle = std::abs(theta-heading);
 
 	if(angle > pi()/4)
 	{
@@ -280,12 +280,14 @@ int main() {
 
             ///// Checking the sensors and state
 			///// Adjust the state accordingly
+			double car_v_mps = car_speed / t3p1help::MPS_TO_MPH;
 			std::vector<double> lane_speeds = t3p1help::getLaneSpeedsMPH(lane_sensors);
 			std::cout << "lane speed : ";
 			for (int l=0; l < lane_speeds.size(); l++) {
 				std::cout << lane_speeds[l] << " ";
 			}
-			std::cout << " car_v: " << car_speed << std::endl;
+			std::cout << " car_v: " << car_speed << " car_v_mps: "
+					  << car_v_mps << std::endl;
             std::cout << "front space: ";
 			std::vector<double> fronts =
 					t3p1help::getFrontDistSs(time_ahead, car_s, car_d, lane_sensors);
@@ -295,7 +297,6 @@ int main() {
 			std::cout << std::endl;
 
             // Too close
-			double car_v_mps = car_speed / t3p1help::MPS_TO_MPH;
             bool tooClose = t3p1help::tooClose(time_ahead, car_s, car_d, lane_sensors);
             bool closeToChangeLane =
 					t3p1help::isCloseToChangeLane(time_ahead, car_s, car_d, lane_sensors);
@@ -315,7 +316,6 @@ int main() {
 
 					}
 				} else {
-					// p_state.lane_num = t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, lane_sensors);
 					p_state.lane_num = changing_lane;
 					std::cout << "changing lane to " << p_state.lane_num << std::endl;
 				}

@@ -177,10 +177,10 @@ namespace t3p1help {
      * @param time_ahead The time in the future to check
      * @param car_s
      * @param car_d
-     * @param car_speed MPH
+     * @param car_v_mps in MPS
      * @return
      */
-    bool hasSafeDistLane(double time_ahead, double car_s, double car_d, double car_speed,
+    bool hasSafeDistLane(double time_ahead, double car_s, double car_d, double car_v_mps,
                      const std::vector<std::vector<std::vector<double>>> lane_sensors) {
         int check_lane = getLaneFromD(car_d);
         double dist;
@@ -188,10 +188,11 @@ namespace t3p1help {
         for (auto car: lane_sensors[check_lane]) {
             dist = car[5] - car_s;
             sen_speed = getSensorCarSpeedMPS(car);
-            if (car_speed < sen_speed) {
-                std::cout << "speed is too slow: " << car_speed << std::endl;
-                return false;
-            }
+            /// if (car_v_mps + 3 < sen_speed) {
+            ///     std::cout << "speed is too slow: car_v_mps " << car_v_mps
+            ///               << " vs sen_speed " << sen_speed << std::endl;
+            ///     return false;
+            /// }
             dist += time_ahead * sen_speed;
             if (dist >= 0 ) { // sensored car infront
                 if (dist < 15) {  // 21 is conservative
@@ -199,7 +200,7 @@ namespace t3p1help {
                     return false;
                 }
             } else { // sensored car behind
-                if (car_speed > sen_speed) {
+                if (car_v_mps > sen_speed) {
                     if (dist > -8) {
                         std::cout << "short back dist when faster: " << dist << std::endl;
                         return false;
@@ -256,27 +257,27 @@ namespace t3p1help {
      * @param time_ahead
      * @param car_s
      * @param cars_d
-     * @param cars_speed
+     * @param cars_v_mps
      * @return
      */
-    int getSafeChangeLane(double time_ahead, double car_s, double car_d, double car_speed,
+    int getSafeChangeLane(double time_ahead, double car_s, double car_d, double car_v_mps,
                       const std::vector<std::vector<std::vector<double>>> lane_sensors) {
         int cur_lane = getLaneFromD(car_d);
         int safe_lane = cur_lane;
         if (cur_lane == 0 || cur_lane == 2) {
             // if (!tooClose(car_s+3, getDFromLane(1), lane_sensors)) {
-            if (hasSafeDistLane(time_ahead, car_s, getDFromLane(1), car_speed, lane_sensors)) {
+            if (hasSafeDistLane(time_ahead, car_s, getDFromLane(1), car_v_mps, lane_sensors)) {
                 safe_lane = 1;
             }
         } else if (cur_lane == 1) {
             std::vector<double> fronts =
                     getFrontDistSs(time_ahead, car_s, car_d,lane_sensors);
             bool safe0 =
-                    hasSafeDistLane(time_ahead, car_s, car_speed,
-                                    getDFromLane(0), lane_sensors);
+                    hasSafeDistLane(time_ahead, car_s,
+                                    getDFromLane(0), car_v_mps, lane_sensors);
             bool safe2 =
-                    hasSafeDistLane(time_ahead, car_s, car_speed,
-                                    getDFromLane(2), lane_sensors);
+                    hasSafeDistLane(time_ahead, car_s,
+                                    getDFromLane(2), car_v_mps, lane_sensors);
             if (safe0 && safe2) {
                 if (fronts[0] > fronts[2]) {
                     safe_lane = 0;
