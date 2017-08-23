@@ -201,7 +201,7 @@ int main() {
   }
 
   // the planner state
-  struct t3p1help::planner_state p_state;
+  t3p1help::planner_state_t p_state;
 
   p_state.lane_num = 1;
   p_state.ref_velocity = 0.0;
@@ -302,6 +302,17 @@ int main() {
 					t3p1help::isCloseToChangeLane(time_ahead, car_s, car_d, lane_sensors);
 			if (closeToChangeLane) {
 				std::cout << "close to change lane: " << std::endl;
+                switch (p_state.ego_state) {
+					case t3p1help::EGO_STATE::CS:
+						p_state.ego_state = t3p1help::EGO_STATE::PCL;
+						break;
+					case t3p1help::EGO_STATE::PCL:
+						t3p1help::enterCL(p_state);
+                        break;
+					case t3p1help::EGO_STATE::CL:
+                        t3p1help::stayCL(p_state);
+						break;
+				}
 				int changing_lane =
 						t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, car_v_mps, lane_sensors);
 				if (p_state.lane_num == changing_lane) {
@@ -314,17 +325,21 @@ int main() {
 							std::cout << "stay land speed in " << p_state.ref_velocity << std::endl;
 						}
 
+					} else {
+					    t3p1help::speedUp(p_state);
 					}
 				} else {
-					p_state.lane_num = changing_lane;
 					std::cout << "changing lane to " << p_state.lane_num << std::endl;
+					p_state.ego_state = t3p1help::EGO_STATE::CL;
+					p_state.lane_num = changing_lane;
 				}
 
 			} else if (p_state.ref_velocity < p_state.limit_velocity) {
 				std::cout << "increasing speed" << std::endl;
-				p_state.ref_velocity += p_state.velocity_step;
+				t3p1help::speedUp(p_state);
 			} else {
 				std::cout << "constant speed" << std::endl;
+                t3p1help::enterCS(p_state);
 			}
 
 			// Get the horizon way points in global coordinates

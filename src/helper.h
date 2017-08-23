@@ -14,19 +14,21 @@ namespace t3p1help {
     // 1 meter per second = 2.23694 miles per hour
     const double MPS_TO_MPH = 2.23694;
     const double MAX_SPEED = 50.0;
-    const int LANE_NUM = 3;
+    const int ROAD_NUM_LANES = 3;
 
     // The state of the ego car
     // CS = Constant Speed
+    // CL = Changing CL
     // CLL = Changing Lane Left
     // CLR = Changing Lane Right
-    enum EGO_STATE {CS, CLL, CLR};
+    // PCS = Prepare changing Lane
+    enum class EGO_STATE {CS, CL, CLL, CLR, PCL};
 
     /**
      * Keep the state for the planner.
      */
-    struct planner_state {
-        EGO_STATE ego_state = CS;
+    typedef struct planner_state {
+        EGO_STATE ego_state = EGO_STATE::CS;
         // current car lane
         int lane_num = 1;
         // current velocity in mph, mile per hour (MPH)
@@ -36,6 +38,10 @@ namespace t3p1help {
         // double limit_velocity = 49.72; // over speed when constant changing lanes
         // double limit_velocity = 49.70;
         double limit_velocity = 49.65;
+        // velocity when changing lane to avoid speed violations
+        double limit_velocity_CL = 49.30;
+        // velocity when costant speed
+        double limit_velocity_CS = 49.70;
         // horizon way point size;
         double horizon_size = 50;
         // horizon distance in meter
@@ -44,7 +50,33 @@ namespace t3p1help {
         double point_dt = 0.02;
         // velocity change per point_dt without jerking
         double velocity_step = 0.224;
+        // Counting for staying in Changing Lane
+        int cl_ticks = 0;
     } planner_state_t;
+
+    /*
+     * Entering CL state
+     */
+    void enterCL(planner_state_t & ps) {
+        ps.ego_state = EGO_STATE::CL;
+        ps.cl_ticks = 0;
+    }
+
+    void stayCL(planner_state_t& ps) {
+        ps.cl_ticks++;
+    }
+
+    void enterCS(planner_state_t& ps) {
+        ps.ego_state = EGO_STATE::CS;
+    }
+
+    void enterPCL(planner_state_t& ps) {
+        ps.ego_state = EGO_STATE::PCL;
+    }
+
+    void speedUp(planner_state_t& ps) {
+        ps.ref_velocity += ps.velocity_step;
+    }
 
     /**
      * Return the lane number
@@ -164,7 +196,7 @@ namespace t3p1help {
     getFrontDistSs(double time_ahead, double car_s, double car_d,
                   const std::vector<std::vector<std::vector<double>>> lane_sensors) {
         std::vector<double> fronts;
-        for (int l=0; l < LANE_NUM; l++) {
+        for (int l=0; l < ROAD_NUM_LANES; l++) {
             fronts.push_back(getFrontDistS(time_ahead, car_s,
                                            getDFromLane(l),
                                            lane_sensors));
@@ -304,7 +336,7 @@ namespace t3p1help {
         double min_speed;
         double car_speed;
         std::vector<double> lane_speeds;
-        for (int l=0; l < LANE_NUM; l++) {
+        for (int l=0; l < ROAD_NUM_LANES; l++) {
             min_speed = MAX_SPEED;
             for (auto car: lane_sensors[l]) {
                 car_speed = getSensorCarSpeedMPS(car);
