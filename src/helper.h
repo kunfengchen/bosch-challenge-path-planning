@@ -50,32 +50,52 @@ namespace t3p1help {
         double point_dt = 0.02;
         // velocity change per point_dt without jerking
         double velocity_step = 0.224;
-        // Counting for staying in Changing Lane
-        int cl_ticks = 0;
+        // Counting for staying in current state
+        int state_ticks = 0;
     } planner_state_t;
+
+    bool isState(planner_state_t& ps, EGO_STATE state) {
+        return ps.ego_state == state;
+    }
 
     /*
      * Entering CL state
      */
     void enterCL(planner_state_t & ps) {
         ps.ego_state = EGO_STATE::CL;
-        ps.cl_ticks = 0;
+        ps.state_ticks = 0;
     }
 
     void stayCL(planner_state_t& ps) {
-        ps.cl_ticks++;
+        ps.state_ticks++;
     }
 
     void enterCS(planner_state_t& ps) {
         ps.ego_state = EGO_STATE::CS;
+        ps.state_ticks = 0;
+    }
+
+    void stayCS(planner_state_t& ps) {
+        ps.state_ticks++ ;
     }
 
     void enterPCL(planner_state_t& ps) {
         ps.ego_state = EGO_STATE::PCL;
+        ps.state_ticks = 0;
+    }
+
+    void stayPCL(planner_state_t& ps) {
+        ps.state_ticks++;
     }
 
     void speedUp(planner_state_t& ps) {
-        ps.ref_velocity += ps.velocity_step;
+        if (ps.ref_velocity < ps.limit_velocity) {
+            ps.ref_velocity += ps.velocity_step;
+        }
+    }
+
+    bool isTransitionCL(planner_state_t& ps) {
+        return (isState(ps, EGO_STATE::CL) && ps.state_ticks < 100);
     }
 
     /**
@@ -347,6 +367,23 @@ namespace t3p1help {
             lane_speeds.push_back(min_speed*MPS_TO_MPH);
         }
         return lane_speeds;
+    }
+
+    void adjustSpeed(planner_state_t& ps,
+                     bool tooClose,
+                     const std::vector<double>& lane_speeds,
+                     int changing_lane) {
+        if (tooClose) {
+            if (ps.ref_velocity > lane_speeds[changing_lane] + 3) {
+                ps.ref_velocity -= ps.velocity_step;
+                std::cout << "decreasing speed to " << ps.ref_velocity << std::endl;
+            } else {
+                std::cout << "stay land speed in " << ps.ref_velocity << std::endl;
+            }
+
+        } else {
+            speedUp(ps);
+        }
     }
 
 }

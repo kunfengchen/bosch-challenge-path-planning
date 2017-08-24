@@ -304,10 +304,10 @@ int main() {
 				std::cout << "close to change lane: " << std::endl;
                 switch (p_state.ego_state) {
 					case t3p1help::EGO_STATE::CS:
-						p_state.ego_state = t3p1help::EGO_STATE::PCL;
+						t3p1help::enterPCL(p_state);
 						break;
 					case t3p1help::EGO_STATE::PCL:
-						t3p1help::enterCL(p_state);
+						t3p1help::stayPCL(p_state);
                         break;
 					case t3p1help::EGO_STATE::CL:
                         t3p1help::stayCL(p_state);
@@ -315,10 +315,11 @@ int main() {
 				}
 				int changing_lane =
 						t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, car_v_mps, lane_sensors);
-				if (p_state.lane_num == changing_lane) {
-					std::cout << "Not safe to change lane. Stay in lane " << p_state.lane_num << std::endl;
+				if (p_state.lane_num == changing_lane  || t3p1help::isTransitionCL(p_state)) {
+					std::cout << "Stay in lane " << p_state.lane_num << std::endl;
+                    /*
                     if (tooClose) {
-						if (p_state.ref_velocity > lane_speeds[changing_lane]) {
+						if (p_state.ref_velocity > lane_speeds[changing_lane]+3) {
 						    p_state.ref_velocity -= p_state.velocity_step;
 						    std::cout << "decreasing speed to " << p_state.ref_velocity << std::endl;
 						} else {
@@ -328,10 +329,13 @@ int main() {
 					} else {
 					    t3p1help::speedUp(p_state);
 					}
+                    */
+                    t3p1help::adjustSpeed(p_state, tooClose, lane_speeds, changing_lane);
 				} else {
 					std::cout << "changing lane to " << p_state.lane_num << std::endl;
-					p_state.ego_state = t3p1help::EGO_STATE::CL;
+					t3p1help::enterCL(p_state);
 					p_state.lane_num = changing_lane;
+					t3p1help::adjustSpeed(p_state, tooClose, lane_speeds, changing_lane);
 				}
 
 			} else if (p_state.ref_velocity < p_state.limit_velocity) {
