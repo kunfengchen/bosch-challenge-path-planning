@@ -280,28 +280,24 @@ int main() {
 
             ///// Checking the sensors and state
 			///// Adjust the state accordingly
-			double car_v_mps = car_speed / t3p1help::MPS_TO_MPH;
-			std::vector<double> lane_speeds = t3p1help::getLaneSpeedsMPH(lane_sensors);
-			std::cout << "lane speed : ";
-			for (int l=0; l < lane_speeds.size(); l++) {
-				std::cout << lane_speeds[l] << " ";
-			}
-			std::cout << " car_v: " << car_speed << " car_v_mps: "
-					  << car_v_mps << std::endl;
-            std::cout << "front space: ";
+			/// double car_v_mps = car_speed / t3p1help::MPS_TO_MPH;
+			/// std::vector<double> lane_speeds = t3p1help::getLaneSpeedsMPH(lane_sensors);
+
+            /// std::cout << "front space: ";
 			std::vector<double> fronts =
 					t3p1help::getFrontDistSs(time_ahead, car_s, car_d, lane_sensors);
-            for (int l=0; l < fronts.size(); l++) {
-                std::cout << fronts[l] << " ";
-            }
-			std::cout << std::endl;
+            /// for (int l=0; l < fronts.size(); l++) {
+            ///     std::cout << fronts[l] << " ";
+            /// }
+			/// std::cout << std::endl;
 
             // Too close
             bool tooClose = t3p1help::tooClose(time_ahead, car_s, car_d, lane_sensors);
             bool closeToChangeLane =
 					t3p1help::isCloseToChangeLane(time_ahead, car_s, car_d, lane_sensors);
 			if (closeToChangeLane) {
-				std::cout << "close to change lane: " << std::endl;
+				/// std::cout << "close to change lane: " << std::endl;
+				/*
                 switch (p_state.ego_state) {
 					case t3p1help::EGO_STATE::CS:
 						t3p1help::enterPCL(p_state);
@@ -312,38 +308,53 @@ int main() {
 					case t3p1help::EGO_STATE::CL:
                         t3p1help::stayCL(p_state);
 						break;
+					default:
+						break;
 				}
 				int changing_lane =
 						t3p1help::getSafeChangeLane(time_ahead, car_s, car_d, car_v_mps, lane_sensors);
 				if (p_state.lane_num == changing_lane  || t3p1help::isTransitionCL(p_state)) {
-					std::cout << "Stay in lane " << p_state.lane_num << std::endl;
-                    /*
-                    if (tooClose) {
-						if (p_state.ref_velocity > lane_speeds[changing_lane]+3) {
-						    p_state.ref_velocity -= p_state.velocity_step;
-						    std::cout << "decreasing speed to " << p_state.ref_velocity << std::endl;
-						} else {
-							std::cout << "stay land speed in " << p_state.ref_velocity << std::endl;
-						}
-
-					} else {
-					    t3p1help::speedUp(p_state);
-					}
-                    */
+					/// std::cout << "Stay in lane " << p_state.lane_num << std::endl;
                     t3p1help::adjustSpeed(p_state, tooClose, lane_speeds, changing_lane);
 				} else {
-					std::cout << "changing lane to " << p_state.lane_num << std::endl;
+					/// std::cout << "changing lane to " << p_state.lane_num << std::endl;
 					t3p1help::enterCL(p_state);
 					p_state.lane_num = changing_lane;
 					t3p1help::adjustSpeed(p_state, tooClose, lane_speeds, changing_lane);
 				}
+				*/
 
-			} else if (p_state.ref_velocity < p_state.limit_velocity) {
-				std::cout << "increasing speed" << std::endl;
-				t3p1help::speedUp(p_state);
+				t3p1help::postStateEvent(p_state,
+										 t3p1help::createStateEvent(
+												 t3p1help::STATE_EVENT_ID::CLOSE_TO_CHANGE_LANE,
+												 time_ahead, car_s, car_d,
+												 car_speed, lane_sensors));
+			/// } else if (p_state.ref_velocity < p_state.limit_velocity) {
+				/// std::cout << "increasing speed" << std::endl;
+			/// 	t3p1help::speedUp(p_state);
 			} else {
-				std::cout << "constant speed" << std::endl;
-                t3p1help::enterCS(p_state);
+				/// std::cout << "constant speed" << std::endl;
+                /*
+				switch (p_state.ego_state) {
+					case t3p1help::EGO_STATE::CS:
+						t3p1help::stayCS(p_state);
+						break;
+					case t3p1help::EGO_STATE::PCL:
+						t3p1help::enterCS(p_state);
+						break;
+					case t3p1help::EGO_STATE::CL:
+						t3p1help::enterCS(p_state);
+						break;
+					default:
+						break;
+				}
+				t3p1help::adjustSpeed(p_state, tooClose, lane_speeds, p_state.lane_num);
+                */
+                t3p1help::postStateEvent(p_state,
+									t3p1help::createStateEvent(
+											t3p1help::STATE_EVENT_ID::FREE_AHEAD,
+									        time_ahead, car_s, car_d,
+											car_speed, lane_sensors));
 			}
 
 			// Get the horizon way points in global coordinates
