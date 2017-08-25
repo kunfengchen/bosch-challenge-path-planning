@@ -34,6 +34,9 @@ namespace t3p1help {
         CHANGE_LANE,
         FREE_AHEAD};
 
+    /**
+     * The state event object
+     */
     typedef struct state_event{
         STATE_EVENT_ID id;
         double time_ahead;
@@ -61,7 +64,7 @@ namespace t3p1help {
         // double limit_velocity = 49.70;
         double limit_velocity = 49.65;
         // velocity when changing lane to avoid speed violations
-        double limit_velocity_CL = 49.45; // 49.45; // 49.50 bit fast
+        double limit_velocity_CL = 49.49; // 49.45; // 49.50 bit fast
         // velocity when costant speed
         double limit_velocity_CS = 49.727; // 49.727 good without change right way; // 49.725, 49.728 bit too fast;
         // horizon way point size;
@@ -76,10 +79,25 @@ namespace t3p1help {
         int state_ticks = 0;
     } planner_state_t;
 
+    /**
+     * Check the state
+     * @param ps
+     * @param state
+     * @return
+     */
     bool isState(planner_state_t& ps, EGO_STATE state) {
         return ps.ego_state == state;
     }
 
+    /**
+     * Create a state event
+     * @param id
+     * @param time_ahead
+     * @param car_s
+     * @param car_d
+     * @param car_speed
+     * @return
+     */
     state_event_t createStateEvent(STATE_EVENT_ID id,
                                    double time_ahead,
                                    double car_s, double car_d, double car_speed,
@@ -94,8 +112,9 @@ namespace t3p1help {
         return event;
     }
 
-    /*
-     * Entering CL state
+    /**
+     * Transtition to CL state
+     * @param ps
      */
     void enterCL(planner_state_t & ps) {
         std::cout << "entering CL:" << std::endl;
@@ -104,6 +123,10 @@ namespace t3p1help {
         ps.limit_velocity = ps.limit_velocity_CL;
     }
 
+    /**
+     * Transition to CL state
+     * @param ps
+     */
     void stayCL(planner_state_t& ps) {
         ps.state_ticks++;
         if (ps.state_ticks % 10 == 0) {
@@ -111,6 +134,10 @@ namespace t3p1help {
         }
     }
 
+    /**
+     * Transtition to CS state
+     * @param ps
+     */
     void enterCS(planner_state_t& ps) {
         std::cout << "entering CS:" << std::endl;
         ps.ego_state = EGO_STATE::CS;
@@ -118,6 +145,10 @@ namespace t3p1help {
         ps.limit_velocity = ps.limit_velocity_CS;
     }
 
+    /**
+     * Transition back to CS state itself
+     * @param ps
+     */
     void stayCS(planner_state_t& ps) {
         ps.state_ticks++ ;
         if (ps.state_ticks % 50 == 0) {
@@ -125,6 +156,10 @@ namespace t3p1help {
         }
     }
 
+    /**
+     * Transition to PCL state
+     * @param ps
+     */
     void enterPCL(planner_state_t& ps) {
         std::cout << "entering PCL:" << std::endl;
         ps.ego_state = EGO_STATE::PCL;
@@ -132,6 +167,10 @@ namespace t3p1help {
         ps.limit_velocity = ps.limit_velocity_CS;
     }
 
+    /**
+     * Transition back to PCL state itself
+     * @param ps
+     */
     void stayPCL(planner_state_t& ps) {
         if (ps.state_ticks % 10 == 0) {
             std::cout << "staying PCL:" << ps.state_ticks << std::endl;
@@ -139,12 +178,22 @@ namespace t3p1help {
         ps.state_ticks++;
     }
 
+    /**
+     * Speed up the car
+     * @param ps
+     */
     void speedUp(planner_state_t& ps) {
         if (ps.ref_velocity < ps.limit_velocity) {
             ps.ref_velocity += ps.velocity_step;
         }
     }
 
+    /**
+     * Is the state in transition to CL
+     * @param ps
+     * @param trans_ticks
+     * @return
+     */
     bool isTransitionCL(planner_state_t& ps, int trans_ticks = 50) {
         return (isState(ps, EGO_STATE::CL) && ps.state_ticks < trans_ticks);
     }
@@ -454,6 +503,13 @@ namespace t3p1help {
         return lane_speeds;
     }
 
+    /**
+     * Adjust the speed
+     * @param ps
+     * @param tooClose
+     * @param lane_speeds
+     * @param changing_lane
+     */
     void adjustSpeed(planner_state_t& ps,
                      bool tooClose,
                      const std::vector<double>& lane_speeds,
@@ -471,6 +527,11 @@ namespace t3p1help {
         }
     }
 
+    /**
+     * Adjust the speed
+     * @param ps
+     * @param event
+     */
     void adjustSpeed(planner_state_t& ps, const state_event_t& event) {
         bool too_close = tooClose(event.time_ahead, event.car_s,
                                   event.car_d, event.lane_sensors);
@@ -478,7 +539,11 @@ namespace t3p1help {
         adjustSpeed(ps, too_close, lane_speeds, event.changing_lane);
     }
 
-
+    /**
+     * Handle the CS event
+     * @param ps
+     * @param event
+     */
     void handleEventFreeAhead(planner_state_t& ps,
                               const state_event_t& event) {
         switch (ps.ego_state) {
@@ -500,6 +565,11 @@ namespace t3p1help {
         adjustSpeed(ps, too_close, lane_speeds, ps.lane_num);
     }
 
+    /**
+     * Handle the change lane event
+     * @param ps
+     * @param event
+     */
     void handleEventChangeLane(planner_state_t& ps, const state_event_t& event) {
         bool canChangeLane = false;
         switch (ps.ego_state) {
@@ -532,7 +602,7 @@ namespace t3p1help {
                 break;
         }
         if (canChangeLane) {
-            if (ps.pre_lane_num == event.changing_lane && isTransitionCL(ps, 45)) {
+            if (ps.pre_lane_num == event.changing_lane && isTransitionCL(ps, 65)) {
                 stayCL(ps);
                 if (ps.state_ticks % 5 == 0) {
                     std::cout << "NOT CHANGING RIGHT AWAY. ticks= " << ps.state_ticks << std::endl;
@@ -545,7 +615,7 @@ namespace t3p1help {
             }
         } else {
             if (ps.ego_state == EGO_STATE::CL) {
-                if (isTransitionCL(ps, 45)) {
+                if (isTransitionCL(ps, 65)) {
                     stayCL(ps);
                 } else {
                     // time out from CS, entering PCL
@@ -559,8 +629,18 @@ namespace t3p1help {
         /// adjusted in PCL: adjustSpeed(ps, event);
     }
 
+    /**
+     * Post the state event for transitioning to next state
+     * @param ps
+     * @param event
+     */
     void postStateEvent(planner_state_t& ps, const state_event_t& event);
 
+    /**
+     * Handing the event by the state
+     * @param ps
+     * @param event
+     */
     void handleEventCloseToChangeLane(planner_state_t& ps, const state_event_t& event) {
         /// std::cout << "close to change lane: " << std::endl;
         double car_v_mps = event.car_speed / MPS_TO_MPH;
@@ -613,6 +693,11 @@ namespace t3p1help {
         adjustSpeed(ps, too_close, lane_speeds, changing_lane);
     }
 
+    /**
+     * Post the state event for transitioning to next state
+     * @param ps
+     * @param event
+     */
     void postStateEvent(planner_state_t& ps, const state_event_t& event) {
         switch (event.id) {
             case STATE_EVENT_ID::FREE_AHEAD:
