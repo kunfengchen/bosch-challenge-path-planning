@@ -63,7 +63,7 @@ namespace t3p1help {
         // velocity when changing lane to avoid speed violations
         double limit_velocity_CL = 49.45; // 49.45; // 49.50 bit fast
         // velocity when costant speed
-        double limit_velocity_CS = 49.5; // 49.727 good without change right way; // 49.725, 49.728 bit too fast;
+        double limit_velocity_CS = 49.727; // 49.727 good without change right way; // 49.725, 49.728 bit too fast;
         // horizon way point size;
         double horizon_size = 50;
         // horizon distance in meter
@@ -106,7 +106,7 @@ namespace t3p1help {
 
     void stayCL(planner_state_t& ps) {
         ps.state_ticks++;
-        if (ps.state_ticks % 50 == 0) {
+        if (ps.state_ticks % 10 == 0) {
             std::cout << "staying CL: ticks: " << ps.state_ticks << std::endl;
         }
     }
@@ -133,7 +133,7 @@ namespace t3p1help {
     }
 
     void stayPCL(planner_state_t& ps) {
-        if (ps.state_ticks % 50 == 0) {
+        if (ps.state_ticks % 10 == 0) {
             std::cout << "staying PCL:" << ps.state_ticks << std::endl;
         }
         ps.state_ticks++;
@@ -304,12 +304,17 @@ namespace t3p1help {
             dist += time_ahead * sen_speed;
             if (dist >= 0 ) { // sensored car infront
                 if (car_v_mps > sen_speed) {
+                    if (sen_speed * MPS_TO_MPH < 30 ) {
+                        // don't change to really slow speed lane
+                        std::cout << "really slow lane to chage to" << std::endl;
+                        return false;
+                    }
                     if (dist < 22) {  // 15 a bit aggressive, 21 is conservative
                         /// std::cout << "short front dist " << dist << std::endl;
                         return false;
                     }
                 } else {
-                    if (dist < 17) {
+                    if (dist < 10) { // 17
                         /// std::cout << "slower front dist " << dist << std::endl;
                         return false;
                     }
@@ -466,6 +471,14 @@ namespace t3p1help {
         }
     }
 
+    void adjustSpeed(planner_state_t& ps, const state_event_t& event) {
+        bool too_close = tooClose(event.time_ahead, event.car_s,
+                                  event.car_d, event.lane_sensors);
+        std::vector<double> lane_speeds = getLaneSpeedsMPH(event.lane_sensors);
+        adjustSpeed(ps, too_close, lane_speeds, event.changing_lane);
+    }
+
+
     void handleEventFreeAhead(planner_state_t& ps,
                               const state_event_t& event) {
         switch (ps.ego_state) {
@@ -492,22 +505,21 @@ namespace t3p1help {
         switch (ps.ego_state) {
             case EGO_STATE::CS:
                 std::cout << "entering CL from CS" << std::endl;
-                /// ps.lane_num = event.changing_lane;
                 canChangeLane = true;
                 break;
             case EGO_STATE::PCL:
-                if (ps.state_ticks % 10 == 0) {
-                    std::cout << "from PCL: current  lane: " << ps.lane_num << std::endl;
-                    std::cout << "previous lane: " << ps.pre_lane_num << std::endl;
-                }
+                /// if (ps.state_ticks % 1 == 0) {
+                ///     std::cout << "from PCL: current  lane: " << ps.lane_num << std::endl;
+                ///     std::cout << "previous lane: " << ps.pre_lane_num << std::endl;
+                /// }
                 if (ps.lane_num == event.changing_lane) {
-                    /// should not happen
+                    std::cout << "CL: can not change lane since they are the same" << std::endl;
                 } else {
                     canChangeLane = true;
                 }
                 break;
             case EGO_STATE::CL:
-                if (ps.state_ticks % 10 == 0) {
+                if (ps.state_ticks % 30 == 0) {
                     std::cout << "from CL: current  lane: " << ps.lane_num << std::endl;
                     std::cout << "previous lane: " << ps.pre_lane_num << std::endl;
                 }
@@ -519,11 +531,10 @@ namespace t3p1help {
             default:
                 break;
         }
-        /// if (isTransitionCL(ps) && ps.pre_lane_num == event.changing_lane) {
         if (canChangeLane) {
-            if (isTransitionCL(ps)) {
-                stayPCL(ps);
-                if (ps.state_ticks % 10 == 0) {
+            if (ps.pre_lane_num == event.changing_lane && isTransitionCL(ps, 45)) {
+                stayCL(ps);
+                if (ps.state_ticks % 5 == 0) {
                     std::cout << "NOT CHANGING RIGHT AWAY. ticks= " << ps.state_ticks << std::endl;
                 }
             } else {
@@ -533,8 +544,19 @@ namespace t3p1help {
                 ps.lane_num = event.changing_lane;
             }
         } else {
-          stayCL(ps);
+            if (ps.ego_state == EGO_STATE::CL) {
+                if (isTransitionCL(ps, 45)) {
+                    stayCL(ps);
+                } else {
+                    // time out from CS, entering PCL
+                    std::cout << "time out from CS after ticks: " << ps.state_ticks << std::endl;
+                    enterPCL(ps);
+                }
+            } else {
+                stayPCL(ps);
+            };
         }
+        /// adjusted in PCL: adjustSpeed(ps, event);
     }
 
     void postStateEvent(planner_state_t& ps, const state_event_t& event);
@@ -543,18 +565,25 @@ namespace t3p1help {
         /// std::cout << "close to change lane: " << std::endl;
         double car_v_mps = event.car_speed / MPS_TO_MPH;
         bool hasChageLaneEvent = false;
-        int changing_lane =
-                getSafeChangeLane(event.time_ahead,
-                                  event.car_s,
-                                  event.car_d,
-                                  car_v_mps,
-                                  event.lane_sensors);
+        int changing_lane = ps.lane_num;
         switch (ps.ego_state) {
             case EGO_STATE::CS:
                 enterPCL(ps);
                 hasChageLaneEvent = true;
+                changing_lane =
+                        getSafeChangeLane(event.time_ahead,
+                                          event.car_s,
+                                          event.car_d,
+                                          car_v_mps,
+                                          event.lane_sensors);
                 break;
             case EGO_STATE::PCL:
+                changing_lane =
+                        getSafeChangeLane(event.time_ahead,
+                                          event.car_s,
+                                          event.car_d,
+                                          car_v_mps,
+                                          event.lane_sensors);
                 if (ps.lane_num == changing_lane) {
                     stayPCL(ps);
                 } else {
@@ -562,26 +591,26 @@ namespace t3p1help {
                 }
                 break;
             case EGO_STATE::CL:
+                // propagating change event.
                 hasChageLaneEvent = true;
                 break;
             default:
                 break;
         }
         if (hasChageLaneEvent) {
-            if (ps.ego_state == EGO_STATE::PCL) {
-                state_event_t new_event = createStateEvent(
-                        STATE_EVENT_ID::CHANGE_LANE,
-                        event.time_ahead, event.car_s, event.car_d,
-                        event.car_speed, event.lane_sensors);
-                new_event.changing_lane = changing_lane;
-                postStateEvent(ps, new_event);
-            }
+            state_event_t new_event = createStateEvent(
+                    STATE_EVENT_ID::CHANGE_LANE,
+                    event.time_ahead, event.car_s, event.car_d,
+                    event.car_speed, event.lane_sensors);
+            new_event.changing_lane = changing_lane;
+            postStateEvent(ps, new_event);
         } else {
-            bool too_close = tooClose(event.time_ahead, event.car_s,
-                                      event.car_d, event.lane_sensors);
-            std::vector<double> lane_speeds = getLaneSpeedsMPH(event.lane_sensors);
-            adjustSpeed(ps, too_close, lane_speeds, changing_lane);
+            // std::cout << "no change lane event" << std::endl;
         }
+        bool too_close = tooClose(event.time_ahead, event.car_s,
+                                   event.car_d, event.lane_sensors);
+        std::vector<double> lane_speeds = getLaneSpeedsMPH(event.lane_sensors);
+        adjustSpeed(ps, too_close, lane_speeds, changing_lane);
     }
 
     void postStateEvent(planner_state_t& ps, const state_event_t& event) {
